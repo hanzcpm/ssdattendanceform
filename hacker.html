@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSD Attendance</title>
+<style>
+body{
+  font-family:'Poppins',sans-serif;
+  background:#000080;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:20px;
+  min-height:300vh;
+}
+.container{
+  background:#000022;
+  padding:20px;
+  border-radius:10px;
+  border:2px solid red;
+  width:100%;
+  max-width:600px;
+  text-align:center;
+}
+h2{color:#ff0000;}
+input,button,select,textarea{padding:8px; margin:5px 0; border-radius:5px; border:none; outline:none;}
+input[type=text],input[type=file],input[type=time],select,textarea{width:100%;}
+button{cursor:pointer; background:linear-gradient(90deg,#00ff88,#00bfff); color:#001; font-weight:700;}
+button:hover{opacity:.9;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+th,td{border:1px solid #fff; padding:6px; text-align:left;}
+th{background:#222;}
+.hidden{display:none;}
+#logo{width:120px;height:120px;border-radius:50%;margin-bottom:10px; border:2px solid red; object-fit:cover;}
+#profilePreview{width:100px;height:100px;border-radius:50%;margin:10px auto;border:2px solid red; object-fit:cover;}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- LOGO -->
+  <img id="logo" src="https://i.postimg.cc/7YKMkCFf/file-000000004aa471fa98fe9bf6b8d84453.png" alt="SSD Logo">
+
+  <!-- MEMBER FORM -->
+  <div id="memberForm">
+    <h2>SSD ATTENDANCE FORM</h2>
+    <form id="attendanceForm">
+      <label>NAME:</label>
+      <input type="text" id="nameInput" required>
+      <label>IGN CPM:</label>
+      <input type="text" id="ignInput" required>
+      <label>ID CPM:</label>
+      <input type="text" id="cpmIdInput" required>
+      <label>Roles:</label><br>
+      <input type="checkbox" name="roles" value="Member"> Member
+      <input type="checkbox" name="roles" value="Leader"> Leader
+      <input type="checkbox" name="roles" value="Admin"> Admin
+      <br><br>
+      <button type="submit">SUBMIT FORM</button>
+    </form>
+    <button id="adminLoginBtn">Admin Login</button>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="adminDashboard" class="hidden">
+    <h2>Admin Dashboard</h2>
+    <div>
+      <label>Reset Time: <input type="time" id="resetTimeInput"></label>
+      <button id="setTimeBtn">Set Time</button>
+    </div>
+    <div style="margin-top:10px;">
+      <button id="resetBtn">Reset Attendance Members</button>
+      <button id="downloadBtn">Download Attendance CSV</button>
+    </div>
+    <table>
+      <thead><tr><th>No</th><th>Name</th><th>IGN CPM</th><th>ID CPM</th><th>Roles</th></tr></thead>
+      <tbody id="adminTable"></tbody>
+    </table>
+    <button id="logoutBtn" style="margin-top:10px;">Logout Admin</button>
+  </div>
+
+</div>
+
+<script>
+// ---------- Data ----------
+let attendanceData = JSON.parse(localStorage.getItem('ssdAttendance')) || [];
+let resetTime = localStorage.getItem('ssdResetTime') || null;
+
+// ---------- Elements ----------
+const memberFormDiv = document.getElementById('memberForm');
+const adminDashboardDiv = document.getElementById('adminDashboard');
+const nameInput = document.getElementById('nameInput');
+const ignInput = document.getElementById('ignInput');
+const cpmIdInput = document.getElementById('cpmIdInput');
+const adminTableBody = document.getElementById('adminTable');
+const resetTimeInput = document.getElementById('resetTimeInput');
+
+if(resetTime) resetTimeInput.value = resetTime;
+
+// ---------- Render Table ----------
+function renderTable(){
+  adminTableBody.innerHTML = '';
+  attendanceData.forEach((entry,index)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${index+1}</td><td>${entry.name}</td><td>${entry.ign}</td><td>${entry.cpmId}</td><td>${entry.roles}</td>`;
+    adminTableBody.appendChild(tr);
+  });
+}
+
+// ---------- Attendance Form Submit ----------
+document.getElementById('attendanceForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const name = nameInput.value.trim();
+  const ign = ignInput.value.trim();
+  const cpmId = cpmIdInput.value.trim();
+  if(!name || !ign || !cpmId) return alert('Fill all fields');
+
+  const roles = Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(r=>r.value).join(', ');
+  attendanceData.push({name, ign, cpmId, roles});
+  localStorage.setItem('ssdAttendance', JSON.stringify(attendanceData));
+  alert('Attendance submitted!');
+  e.target.reset();
+});
+
+// ---------- Admin Login ----------
+document.getElementById('adminLoginBtn').addEventListener('click', ()=>{
+  const username = prompt('Username:');
+  const password = prompt('Password:');
+  if(username==='ssdadmin2025' && password==='Admincpmoi2025'){
+    memberFormDiv.classList.add('hidden');
+    adminDashboardDiv.classList.remove('hidden');
+    renderTable();
+  } else alert('Invalid credentials');
+});
+
+// ---------- Admin Logout ----------
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  adminDashboardDiv.classList.add('hidden');
+  memberFormDiv.classList.remove('hidden');
+});
+
+// ---------- Admin Actions ----------
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(confirm('Reset all attendance?')){
+    attendanceData=[];
+    localStorage.setItem('ssdAttendance', JSON.stringify(attendanceData));
+    renderTable();
+  }
+});
+
+document.getElementById('downloadBtn').addEventListener('click',()=>{
+  if(attendanceData.length===0){ alert('No data'); return; }
+  const csv = attendanceData.map(d=>`${d.name},${d.ign},${d.cpmId},${d.roles}`).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download='attendance.csv';
+  a.click();
+});
+
+// ---------- Set Reset Time ----------
+document.getElementById('setTimeBtn').addEventListener('click', ()=>{
+  resetTime = resetTimeInput.value;
+  localStorage.setItem('ssdResetTime', resetTime);
+  alert('Reset time set to ' + resetTime);
+});
+
+// ---------- Auto Reset ----------
+setInterval(()=>{
+  if(resetTime){
+    const now = new Date();
+    const [h,m]=resetTime.split(':').map(Number);
+    if(now.getHours()===h && now.getMinutes()===m){
+      attendanceData=[];
+      localStorage.setItem('ssdAttendance', JSON.stringify(attendanceData));
+      if(!adminDashboardDiv.classList.contains('hidden')) renderTable();
+      console.log('Attendance automatically reset');
+    }
+  }
+},60000);
+</script>
+
+</body>
+</html>
